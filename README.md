@@ -105,6 +105,7 @@ godotenv.Load("arquivoum.env", "arquivodois.env")
 
 Na função **main** primeiro iremos montar a URI da conexão ao banco.
 
+(main.go)
 ```golang
 // mongodb uri format
 uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/",
@@ -118,6 +119,7 @@ Iremos passar a URI para uma entidade **clientOpt** do tipo ***options.ClientOpt
 
 Após isso iremos chamar a função **mongo.Connect()** passando o contexto e o clientOpt. Também terá uma função para encerrar a conexão e outra para dar um ping no banco. 
 
+(main.go)
 ```go
 // connection
 clientOpt := options.Client().ApplyURI(uri)
@@ -141,6 +143,7 @@ if err != nil {
 
 Com a conexão feita, iremos definir qual banco e coleção irá ser manipulada.
 
+(main.go)
 ```golang
 collection = client.Database(mongoConfig.Database).Collection(mongoConfig.Collection)
 filter := bson.D{{Key: "nome", Value: "Rafael"}}
@@ -152,6 +155,7 @@ Para realizar a consulta é preciso chamar a função **FindOne()** que pertence
 
 A função **FindOne()** retorna somente um documento do banco a partir de um filtro.
 
+(main.go)
 ```golang
 // select one document
 var result bson.M
@@ -171,6 +175,17 @@ fmt.Println(string(resultB))
 
 ## Código Final
 
+(.env)
+```env
+MONGO_USER=admin
+MONGO_PASSWORD=admin
+MONGO_HOST=localhost
+MONGO_PORT=27017
+MONGO_DATABASE="dev"
+MONGO_COLLECTION="pessoa"
+```
+
+(main.go)
 ```golang
 package main
 
@@ -262,4 +277,3 @@ func main() {
 
 }
 ```
-
