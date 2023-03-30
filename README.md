@@ -101,6 +101,165 @@ godotenv.Load("arquivoqualquer")
 godotenv.Load("arquivoum.env", "arquivodois.env")
 ```
 
+## Conectando ao MongoDB
 
+Na função **main** primeiro iremos montar a URI da conexão ao banco.
 
+```golang
+// mongodb uri format
+uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/",
+	mongoConfig.User, mongoConfig.Password, mongoConfig.Host, mongoConfig.Port)
+if uri == "" {
+	log.Fatal("You must set your 'uri' variable.")
+}
+```
+
+Iremos passar a URI para uma entidade **clientOpt** do tipo ***options.ClientOptions**. O ClientOptions possui várias configurações de conexão ao MongoDB, caso precise configurar uma conexão com regras específica será aqui que será adicionado.
+
+Após isso iremos chamar a função **mongo.Connect()** passando o contexto e o clientOpt. Também terá uma função para encerrar a conexão e outra para dar um ping no banco. 
+
+```go
+// connection
+clientOpt := options.Client().ApplyURI(uri)
+client, err := mongo.Connect(ctx, clientOpt)
+if err != nil {
+	log.Fatal("MongoDB connection error: " + err.Error())
+}
+
+defer func() {
+	if err := client.Disconnect(ctx); err != nil {
+		log.Fatal("MongoDB disconnection error: " + err.Error())
+	}
+}()
+
+// check connection
+err = client.Ping(ctx, nil)
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+Com a conexão feita, iremos definir qual banco e coleção irá ser manipulada.
+
+```golang
+collection = client.Database(mongoConfig.Database).Collection(mongoConfig.Collection)
+filter := bson.D{{Key: "nome", Value: "Rafael"}}
+```
+
+A variável **filter** é responsável por filtrar a consulta da query.
+
+Para realizar a consulta é preciso chamar a função **FindOne()** que pertence ao **collection**. É preciso passar o contexto, o filtro e uma estrutura do tipo **bson.M** para receber o resultado.
+
+A função **FindOne()** retorna somente um documento do banco a partir de um filtro.
+
+```golang
+// select one document
+var result bson.M
+err = collection.FindOne(ctx, filter).Decode(&result)
+if err != nil {
+	if err == mongo.ErrNoDocuments {
+		fmt.Println("Document not found")
+		return
+	}
+	log.Fatal(err)
+}
+
+// print result
+resultB, _ := json.Marshal(result)
+fmt.Println(string(resultB))
+```
+
+## Código Final
+
+```golang
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+type MongoConfig struct {
+	User       string
+	Password   string
+	Host       string
+	Port       string
+	Database   string
+	Collection string
+}
+
+var mongoConfig MongoConfig
+var collection *mongo.Collection
+var ctx = context.TODO()
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	mongoConfig.User = os.Getenv("MONGO_USER")
+	mongoConfig.Password = os.Getenv("MONGO_PASSWORD")
+	mongoConfig.Host = os.Getenv("MONGO_HOST")
+	mongoConfig.Port = os.Getenv("MONGO_PORT")
+	mongoConfig.Database = os.Getenv("MONGO_DATABASE")
+	mongoConfig.Collection = os.Getenv("MONGO_COLLECTION")
+}
+
+func main() {
+	// mongodb uri format
+	uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/",
+		mongoConfig.User, mongoConfig.Password, mongoConfig.Host, mongoConfig.Port)
+	if uri == "" {
+		log.Fatal("You must set your 'uri' variable.")
+	}
+
+	// connection
+	clientOpt := options.Client().ApplyURI(uri)
+	client, err := mongo.Connect(ctx, clientOpt)
+	if err != nil {
+		log.Fatal("MongoDB connection error: " + err.Error())
+	}
+
+	defer func() {
+		if err := client.Disconnect(ctx); err != nil {
+			log.Fatal("MongoDB disconnection error: " + err.Error())
+		}
+	}()
+
+	// check connection
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// set database and collection
+	collection = client.Database(mongoConfig.Database).Collection(mongoConfig.Collection)
+	filter := bson.D{{Key: "nome", Value: "Rafael"}}
+
+	// select one document
+	var result bson.M
+	err = collection.FindOne(ctx, filter).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			fmt.Println("Document not found")
+			return
+		}
+		log.Fatal(err)
+	}
+
+	// print result
+	resultB, _ := json.Marshal(result)
+	fmt.Println(string(resultB))
+
+}
+```
 
