@@ -282,4 +282,4 @@ func main() {
 
 No seguinte link existe mais exemplos de como utilizar o MongoDB.
 
-https://github.com/rafaeldajuda/mongodb-golang/examples
+https://github.com/rafaeldajuda/mongodb-golang/tree/master/examples
